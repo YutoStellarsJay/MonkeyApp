@@ -1,7 +1,6 @@
 ﻿namespace MyMonkeyApp;
 
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using MyMonkeyApp.Helpers;
 using MyMonkeyApp.Models;
@@ -11,7 +10,7 @@ using MyMonkeyApp.Models;
 /// </summary>
 internal static class Program
 {
-	private static readonly string[] AsciiArts = new[]
+	private static readonly string[] AsciiArts =
 	{
 		"(\\_/)\n( •_•)\n/ >🐒",
 		"  _\n ('_')\n/)>🐵",
@@ -20,79 +19,83 @@ internal static class Program
 
 	private static async Task Main(string[] args)
 	{
+		Console.Clear();
 		while (true)
 		{
 			PrintMenu();
-			var input = Console.ReadLine();
-			if (string.IsNullOrWhiteSpace(input))
-			{
+			string? input = Console.ReadLine();
+			if (string.IsNullOrWhiteSpace(input)) // If its empty before all checks skip
 				continue;
-			}
-
-			switch (input.Trim())
+			else if (input == "exit")
 			{
-				case "1":
-					await ListAllMonkeysAsync();
-					break;
-				case "2":
-					await GetDetailsByNameAsync();
-					break;
-				case "3":
-					await GetRandomMonkeyAsync();
-					break;
-				case "4":
-				case "q":
-				case "exit":
-					Console.WriteLine("Goodbye!");
-					return;
-				default:
-					Console.WriteLine("Unknown option. Choose 1-4.");
-					break;
+				Console.WriteLine("Goodbye!"); // If input is "exit" exit before all one character checks
+				return;
+			}
+			if (input.Length == 1)
+			{
+				switch (input.Trim()[0])
+				{
+					case '1':
+						await ListAllMonkeysAsync();
+						break;
+					case '2':
+						await GetDetailsByNameAsync();
+						break;
+					case '3':
+						await GetRandomMonkeyAsync();
+						break;
+					case '4':
+					case 'q':
+						Console.WriteLine("Goodbye!"); // 4 or q now also do quit (Before they stacked over default)
+						return;
+					default:
+						Console.WriteLine("Unknown option. Choose 1-4.");
+						break;
+				}
 			}
 		}
 	}
 
 	private static void PrintMenu()
 	{
-		Console.WriteLine();
-		Console.WriteLine("Monkey Explorer");
-		Console.WriteLine("1) List all monkeys");
-		Console.WriteLine("2) Get details for a monkey by name");
-		Console.WriteLine("3) Get a random monkey");
-		Console.WriteLine("4) Exit (or q)");
-		Console.Write("Select an option: ");
+		Console.Write(@"
+Monkey Explorer
+1) List all monkeys
+2) Get details for a monkey by name
+3) Get a random monkey
+4) Exit (or q)
+Select an option: ");
 	}
 
 	private static async Task ListAllMonkeysAsync()
 	{
+		Console.Clear();
 		var monkeys = await MonkeyHelper.GetMonkeysAsync();
 		if (monkeys == null || monkeys.Count == 0)
 		{
 			Console.WriteLine("No monkeys available.");
 			return;
 		}
-
-		Console.WriteLine();
-		Console.WriteLine("{0,-25} {1,-30} {2,10} {3,10} {4,10}", "Name", "Location", "Population", "Latitude", "Longitude");
+		Console.WriteLine("\n{0,-25} {1,-30} {2,10} {3,10} {4,10}", "Name", "Location", "Population", "Latitude", "Longitude");
 		Console.WriteLine(new string('-', 95));
-
-		foreach (var m in monkeys)
+		foreach (Monkey m in monkeys)
 		{
-			Console.WriteLine("{0,-25} {1,-30} {2,10} {3,10:F6} {4,10:F6}", Truncate(m.Name,25), Truncate(m.Location,30), m.Population, m.Latitude, m.Longitude);
+			Console.WriteLine("{0,-25} {1,-30} {2,10} {3,10:F6} {4,10:F6}", Truncate(m.Name, 25), Truncate(m.Location, 30), m.Population, m.Latitude, m.Longitude);
 		}
 	}
 
 	private static async Task GetDetailsByNameAsync()
 	{
+		Console.Clear();
 		Console.Write("Enter monkey name: ");
-		var name = Console.ReadLine();
+		string? name = Console.ReadLine();
 		if (string.IsNullOrWhiteSpace(name))
 		{
 			Console.WriteLine("Name cannot be empty.");
 			return;
 		}
 
-		var monkey = await MonkeyHelper.GetMonkeyByNameAsync(name.Trim());
+		Monkey? monkey = await MonkeyHelper.GetMonkeyByNameAsync(name.Trim());
 		if (monkey == null)
 		{
 			Console.WriteLine($"No monkey found with name '{name}'.");
@@ -104,7 +107,8 @@ internal static class Program
 
 	private static async Task GetRandomMonkeyAsync()
 	{
-		var monkey = await MonkeyHelper.GetRandomMonkeyAsync();
+		Console.Clear();
+		Monkey? monkey = await MonkeyHelper.GetRandomMonkeyAsync();
 		if (monkey == null)
 		{
 			Console.WriteLine("No monkeys available to pick.");
@@ -112,29 +116,23 @@ internal static class Program
 		}
 
 		// show ASCII art randomly
-		var art = AsciiArts[Random.Shared.Next(AsciiArts.Length)];
-		Console.WriteLine();
-		Console.WriteLine(art);
-		Console.WriteLine();
-
+		string art = AsciiArts[Random.Shared.Next(AsciiArts.Length)];
+		Console.WriteLine($"\n{art}\n");
 		PrintMonkeyDetails(monkey);
-
-		var count = MonkeyHelper.GetAccessCount(monkey.Name);
+		int count = MonkeyHelper.GetAccessCount(monkey.Name);
 		Console.WriteLine($"(random-picked count for {monkey.Name}: {count})");
 	}
 
 	private static void PrintMonkeyDetails(Monkey m)
 	{
-		Console.WriteLine();
-		Console.WriteLine($"Name: {m.Name}");
-		Console.WriteLine($"Location: {m.Location}");
-		Console.WriteLine($"Population: {m.Population}");
-		Console.WriteLine($"Coordinates: {m.Latitude:F6}, {m.Longitude:F6}");
-		Console.WriteLine($"Image: {m.Image}");
-		Console.WriteLine("Details:");
-		Console.WriteLine(m.Details);
+		Console.WriteLine($@"Name: {m.Name}
+Location: {m.Location}
+Population: {m.Population}
+Coordinates: {m.Latitude:F6}, {m.Longitude:F6}
+Image: {m.Image}
+Details:
+{m.Details}");
 	}
-
 	private static string Truncate(string? value, int maxLength)
-		=> string.IsNullOrEmpty(value) ? string.Empty : (value.Length <= maxLength ? value : value.Substring(0, maxLength - 3) + "...");
+		 => string.IsNullOrEmpty(value) ? "" : (value.Length > maxLength ? value[..(maxLength - 3)] + "..." : value);
 }
