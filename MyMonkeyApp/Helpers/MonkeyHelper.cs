@@ -6,6 +6,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using MyMonkeyApp.Models;
+using System.Security.Cryptography;
+using System.Text;
+using System.Security;
 
 /// <summary>
 /// Static helper that manages an in-memory collection of monkeys seeded from the MCP sample data.
@@ -24,6 +27,17 @@ public static class MonkeyHelper
 
     static MonkeyHelper()
     {
+        using (SHA512 sha = SHA512.Create())
+        {
+            string hash = Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(File.ReadAllText("DefaultMonkeys.json"))));
+            if (hash != "HpLvjmzqGi8UmYYam3SDZiwq7rbqBw/Uac9l20SjjOzBrPlumXum+hUfWoS+QCRm++fTMwC5wnhAeAifzZmMPw==")
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Basic Security Check Failed: File to get monkeys was edited 🙈🙉");
+                Console.ResetColor();
+                throw new SecurityException("Default monkey file should not be edited (Basic security check)");
+            }
+        }
         try
         {
             _monkeys = JsonSerializer.Deserialize<List<Monkey>>(File.ReadAllText("DefaultMonkeys.json"), _jsonOptions) ?? new();
